@@ -69,7 +69,7 @@ const ROOMS = [
   },
 ];
 
-const TIME_LIMIT     = 8000;
+const TIME_LIMIT     = 15000;
 const EVIDENCE_DELAY = 1400;
 
 // ─── SCORING ──────────────────────────────────────────────────────────────────
@@ -176,8 +176,8 @@ function ChoiceButton({ choice, idx, onClick, revealed, disabled }) {
         marginBottom: "12px", cursor: disabled ? "default" : "pointer",
         background: hover ? "rgba(180,100,20,0.18)" : "rgba(20,10,5,0.6)",
         border: hover ? "1px solid rgba(240,160,0,0.55)" : "1px solid rgba(120,60,0,0.3)",
-        borderRadius: "8px", color: hover ? "#ffe8b0" : "#c9a87a",
-        fontSize: "13px", textAlign: "left", lineHeight: "1.5",
+        borderRadius: "8px", color: hover ? "#fff0cc" : "#e0c9a0",
+        fontSize: "15px", textAlign: "left", lineHeight: "1.5",
         transition: "all 0.18s ease",
         boxShadow: hover ? "0 0 18px rgba(200,120,0,0.15), inset 0 1px 0 rgba(255,200,80,0.08)" : "none",
         fontFamily: "'Georgia', serif",
@@ -186,13 +186,13 @@ function ChoiceButton({ choice, idx, onClick, revealed, disabled }) {
     >
       <span style={{
         display: "inline-block", width: "20px", color: "rgba(200,120,0,0.5)",
-        fontFamily: "monospace", fontSize: "11px", marginRight: "8px"
+        fontFamily: "monospace", fontSize: "13px", marginRight: "8px"
       }}>
         {idx === 0 ? "I." : "II."}
       </span>
       {choice.label}
       <span style={{
-        float: "right", color: "rgba(180,100,20,0.5)", fontSize: "10px",
+        float: "right", color: "rgba(210,150,60,0.7)", fontSize: "12px",
         fontFamily: "monospace", marginTop: "2px"
       }}>
         p={choice.probability}
@@ -280,12 +280,12 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
         </div>
         <h2 style={{
           color: "#e8c98a", fontFamily: "'Georgia', serif",
-          fontSize: "18px", fontWeight: "700", letterSpacing: "0.5px"
+          fontSize: "22px", fontWeight: "700", letterSpacing: "0.5px"
         }}>
           {room.title}
         </h2>
         <div style={{
-          color: "rgba(180,100,20,0.5)", fontSize: "10px",
+          color: "rgba(200,130,50,0.7)", fontSize: "12px",
           fontFamily: "monospace", letterSpacing: "2px", marginTop: "4px"
         }}>
           CHAMBER {roomIdx + 1} OF {totalRooms}
@@ -297,7 +297,7 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
 
       {/* Scenario */}
       <p style={{
-        color: "#9e7a50", fontSize: "13px", lineHeight: "1.75",
+        color: "#c9a87a", fontSize: "15px", lineHeight: "1.75",
         marginBottom: "14px", fontFamily: "'Georgia', serif", fontStyle: "italic"
       }}>
         {room.scenario}
@@ -309,7 +309,7 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
           padding: "10px 14px", borderRadius: "6px",
           background: "rgba(100,50,0,0.25)",
           border: "1px solid rgba(160,80,0,0.3)",
-          color: "rgba(220,160,60,0.75)", fontSize: "12px",
+          color: "rgba(240,190,90,0.9)", fontSize: "14px",
           fontFamily: "monospace", marginBottom: "18px", lineHeight: "1.6",
           boxShadow: "inset 0 1px 0 rgba(255,200,80,0.05)"
         }}>
@@ -344,7 +344,7 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
         }}>
           <div style={{
             color: feedback.choseOptimal ? "#a9e34b" : "#ff6b6b",
-            fontSize: "13px", fontFamily: "monospace", fontWeight: "bold",
+            fontSize: "15px", fontFamily: "monospace", fontWeight: "bold",
             marginBottom: "4px"
           }}>
             {feedback.timedOut
@@ -353,7 +353,7 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
               ? "✦ Optimal path taken."
               : "✗ A costlier road."}
           </div>
-          <div style={{ fontSize: "11px", fontFamily: "monospace", color: "rgba(200,180,140,0.5)" }}>
+          <div style={{ fontSize: "13px", fontFamily: "monospace", color: "rgba(220,200,160,0.75)" }}>
             EV optimal: {room.choices[room.optimalIdx].ev.toFixed(1)} gold &nbsp;|&nbsp;
             EV chosen: {room.choices[feedback.idx].ev.toFixed(1)} gold
           </div>
@@ -401,10 +401,10 @@ function ScoreScreen({ decisions }) {
       {/* Title */}
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
         <div style={{ fontSize: "28px", marginBottom: "6px" }}>⚔</div>
-        <h2 style={{ color: "#e8c98a", fontFamily: "'Georgia', serif", fontSize: "20px", marginBottom: "4px" }}>
+        <h2 style={{ color: "#e8c98a", fontFamily: "'Georgia', serif", fontSize: "24px", marginBottom: "4px" }}>
           The Reckoning
         </h2>
-        <div style={{ color: "rgba(180,100,20,0.5)", fontSize: "10px", fontFamily: "monospace", letterSpacing: "2px" }}>
+        <div style={{ color: "rgba(200,130,50,0.7)", fontSize: "12px", fontFamily: "monospace", letterSpacing: "2px" }}>
           COGNITIVE PROFILE COMPLETE
         </div>
       </div>
@@ -417,22 +417,22 @@ function ScoreScreen({ decisions }) {
         borderRadius: "10px", marginBottom: "24px",
         boxShadow: `0 0 24px ${style.color}18`
       }}>
-        <div style={{ color: "rgba(180,100,20,0.45)", fontSize: "10px", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
+        <div style={{ color: "rgba(200,130,50,0.7)", fontSize: "12px", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
           YOUR ARCHETYPE
         </div>
         <div style={{
-          color: style.color, fontSize: "22px", fontFamily: "'Georgia', serif",
+          color: style.color, fontSize: "26px", fontFamily: "'Georgia', serif",
           fontWeight: "bold", marginBottom: "8px",
           textShadow: `0 0 20px ${style.color}60`
         }}>
           {style.label}
         </div>
-        <div style={{ color: "#9e7a50", fontSize: "12px", fontFamily: "'Georgia', serif", fontStyle: "italic", lineHeight: "1.6" }}>
+        <div style={{ color: "#c9a87a", fontSize: "14px", fontFamily: "'Georgia', serif", fontStyle: "italic", lineHeight: "1.6" }}>
           {style.desc}
         </div>
         <div style={{
           marginTop: "12px", display: "flex", justifyContent: "center", gap: "24px",
-          fontSize: "11px", fontFamily: "monospace", color: "rgba(180,120,40,0.5)"
+          fontSize: "13px", fontFamily: "monospace", color: "rgba(210,160,70,0.75)"
         }}>
           <span>{correct}/{decisions.length} optimal</span>
           <span>avg {avgRT}s</span>
@@ -449,23 +449,23 @@ function ScoreScreen({ decisions }) {
             boxShadow: `0 0 12px ${m.color}0a`
           }}>
             <div style={{
-              color: "rgba(180,100,20,0.4)", fontSize: "9px",
+              color: "rgba(210,140,50,0.7)", fontSize: "11px",
               fontFamily: "monospace", letterSpacing: "1.5px", marginBottom: "6px"
             }}>
               {m.label.toUpperCase()}
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "4px" }}>
-              <span style={{ color: m.color, fontSize: "22px", fontWeight: "bold", fontFamily: "'Georgia', serif" }}>
+              <span style={{ color: m.color, fontSize: "26px", fontWeight: "bold", fontFamily: "'Georgia', serif" }}>
                 {m.value}
               </span>
-              <span style={{ color: `${m.color}80`, fontSize: "11px", fontFamily: "monospace" }}>
+              <span style={{ color: `${m.color}80`, fontSize: "13px", fontFamily: "monospace" }}>
                 {m.unit}
               </span>
             </div>
-            <div style={{ color: "rgba(180,120,40,0.35)", fontSize: "10px", fontFamily: "monospace", lineHeight: "1.5" }}>
+            <div style={{ color: "rgba(210,160,70,0.6)", fontSize: "12px", fontFamily: "monospace", lineHeight: "1.5" }}>
               {m.symbol}
             </div>
-            <p style={{ color: "rgba(160,110,50,0.45)", fontSize: "10px", fontFamily: "monospace", margin: "4px 0 0", lineHeight: "1.5" }}>
+            <p style={{ color: "rgba(200,150,80,0.7)", fontSize: "12px", fontFamily: "monospace", margin: "4px 0 0", lineHeight: "1.5" }}>
               {m.desc}
             </p>
           </div>
@@ -475,7 +475,7 @@ function ScoreScreen({ decisions }) {
       {/* Decision log */}
       <div>
         <div style={{
-          color: "rgba(180,100,20,0.4)", fontSize: "9px",
+          color: "rgba(210,140,50,0.7)", fontSize: "11px",
           fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px"
         }}>
           SCROLL OF DECISIONS
@@ -490,14 +490,14 @@ function ScoreScreen({ decisions }) {
               marginBottom: "2px",
             }}>
               <span style={{
-                color: "rgba(160,110,50,0.55)", fontSize: "11px",
+                color: "rgba(200,160,90,0.8)", fontSize: "13px",
                 fontFamily: "'Georgia', serif", flex: 1
               }}>
                 {ROOMS[i].title}
               </span>
-              <span style={{ display: "flex", gap: "12px", fontFamily: "monospace", fontSize: "10px" }}>
-                <span style={{ color: "rgba(160,110,50,0.35)" }}>ev={chosen.ev.toFixed(1)}</span>
-                <span style={{ color: "rgba(160,110,50,0.35)" }}>{(d.rt / 1000).toFixed(2)}s</span>
+              <span style={{ display: "flex", gap: "12px", fontFamily: "monospace", fontSize: "12px" }}>
+                <span style={{ color: "rgba(200,160,90,0.6)" }}>ev={chosen.ev.toFixed(1)}</span>
+                <span style={{ color: "rgba(200,160,90,0.6)" }}>{(d.rt / 1000).toFixed(2)}s</span>
                 <span style={{
                   color: d.choseOptimal ? "#a9e34b" : "#e03131",
                   fontWeight: "bold", minWidth: "10px", textAlign: "center"
@@ -577,14 +577,14 @@ export default function DDMDungeon() {
             borderBottom: "1px solid rgba(120,60,0,0.25)"
           }}>
             <span style={{
-              color: "rgba(200,120,30,0.7)", fontSize: "11px",
+              color: "rgba(220,150,50,0.85)", fontSize: "13px",
               fontFamily: "monospace", letterSpacing: "3px",
               animation: "flicker 4s infinite"
             }}>
               ⚔ THE DECISION DUNGEON
             </span>
             <span style={{
-              color: "rgba(160,80,20,0.4)", fontSize: "10px",
+              color: "rgba(200,120,50,0.65)", fontSize: "12px",
               fontFamily: "monospace", animation: "pulse 3s infinite"
             }}>
               COGS 180 ▸ W26
@@ -595,7 +595,7 @@ export default function DDMDungeon() {
           {phase === "intro" && (
             <div style={{ animation: "fadeSlideUp 0.5s ease both" }}>
               <h1 style={{
-                fontSize: "30px", fontWeight: "800",
+                fontSize: "36px", fontWeight: "800",
                 color: "#e8c98a", fontFamily: "'Georgia', serif",
                 marginBottom: "6px", letterSpacing: "-0.5px",
                 textShadow: "0 0 30px rgba(200,120,0,0.3)"
@@ -603,7 +603,7 @@ export default function DDMDungeon() {
                 The Decision<br />Dungeon
               </h1>
               <p style={{
-                color: "rgba(160,90,20,0.6)", fontSize: "12px",
+                color: "rgba(200,150,80,0.8)", fontSize: "14px",
                 fontFamily: "monospace", marginBottom: "22px",
                 lineHeight: "1.8", letterSpacing: "0.5px"
               }}>
@@ -617,7 +617,7 @@ export default function DDMDungeon() {
                 padding: "12px 16px", borderRadius: "8px",
                 background: "rgba(60,25,0,0.35)",
                 border: "1px solid rgba(120,60,0,0.3)",
-                color: "rgba(200,130,40,0.6)", fontSize: "11px",
+                color: "rgba(220,170,80,0.8)", fontSize: "13px",
                 fontFamily: "monospace", marginBottom: "28px", lineHeight: "1.7"
               }}>
                 ◈ Each chamber grants {(EVIDENCE_DELAY/1000).toFixed(1)}s of observation,<br />
@@ -630,7 +630,7 @@ export default function DDMDungeon() {
                   background: "linear-gradient(135deg, rgba(160,70,0,0.25), rgba(100,40,0,0.15))",
                   border: "1px solid rgba(200,100,20,0.45)",
                   borderRadius: "10px", color: "#f59f00",
-                  fontSize: "13px", fontFamily: "monospace",
+                  fontSize: "15px", fontFamily: "monospace",
                   letterSpacing: "3px", cursor: "pointer",
                   boxShadow: "0 0 20px rgba(160,80,0,0.12)",
                   transition: "all 0.2s ease"
@@ -670,18 +670,18 @@ export default function DDMDungeon() {
                   width: "100%", marginTop: "24px", padding: "13px",
                   background: "transparent",
                   border: "1px solid rgba(100,50,10,0.3)",
-                  borderRadius: "8px", color: "rgba(160,100,30,0.4)",
-                  fontSize: "11px", fontFamily: "monospace",
+                  borderRadius: "8px", color: "rgba(200,150,70,0.65)",
+                  fontSize: "13px", fontFamily: "monospace",
                   letterSpacing: "2px", cursor: "pointer",
                   transition: "all 0.2s ease"
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = "rgba(200,100,20,0.4)";
-                  e.currentTarget.style.color = "rgba(200,120,40,0.65)";
+                  e.currentTarget.style.color = "rgba(220,160,70,0.85)";
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = "rgba(100,50,10,0.3)";
-                  e.currentTarget.style.color = "rgba(160,100,30,0.4)";
+                  e.currentTarget.style.color = "rgba(200,150,70,0.65)";
                 }}
               >
                 ↺ DESCEND AGAIN

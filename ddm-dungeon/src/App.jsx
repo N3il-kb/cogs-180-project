@@ -12,6 +12,7 @@ const ROOMS = [
       { label: "Gamble on the jeweled box — 25 gold, but cursed 40% of the time.", value: 25, probability: 0.6, ev: 15 },
     ],
     optimalIdx: 1,
+    riskyIdx: 1,
     evidence: "You notice fresh scratches on the iron lock — the box has been opened recently. Others survived.",
     drift_signal: 0.6,
   },
@@ -25,6 +26,7 @@ const ROOMS = [
       { label: "Break the ornate seal — 80% chance of 8 gold inside.", value: 8, probability: 0.8, ev: 6.4 },
     ],
     optimalIdx: 1,
+    riskyIdx: 1,
     evidence: "The ornate chest's runes pulse with a steady rhythm — a warding sign, not a curse.",
     drift_signal: 0.7,
   },
@@ -38,6 +40,7 @@ const ROOMS = [
       { label: "Right passage — 10% ambush risk, reward of 12 gold.", value: 12, probability: 0.9, ev: 10.8 },
     ],
     optimalIdx: 0,
+    riskyIdx: 0,
     evidence: "Fresh boot-prints lead left. The scout who lost fingers went right.",
     drift_signal: 0.4,
   },
@@ -51,6 +54,7 @@ const ROOMS = [
       { label: "Draw your blade — 40% to win 15 gold, 60% to flee losing only 3.", value: 15, probability: 0.4, ev: 0.6 },
     ],
     optimalIdx: 1,
+    riskyIdx: 1,
     evidence: "The wyvern's wing is scarred — it has fled before. It may again.",
     drift_signal: 0.3,
   },
@@ -64,6 +68,7 @@ const ROOMS = [
       { label: "Seize the silver key — 50% opens the gate, 50 gold reward.", value: 50, probability: 0.5, ev: 25 },
     ],
     optimalIdx: 0,
+    riskyIdx: 1,
     evidence: "The golden key is warm — enchanted. The silver key smells of failure.",
     drift_signal: 0.8,
   },
@@ -86,34 +91,36 @@ function estimateThreshold(decisions) {
   return Math.max(0.5, (avgRT / TIME_LIMIT) * 4).toFixed(2);
 }
 
-function computeBayesScore(decisions) {
-  let logOdds = 0;
-  decisions.forEach((d, i) => {
-    const sig = ROOMS[i].drift_signal;
-    logOdds += d.choseOptimal
-      ? Math.log(sig / (1 - sig))
-      : Math.log((1 - sig) / sig);
-  });
-  return (100 / (1 + Math.exp(-logOdds))).toFixed(1);
+function estimateRiskPreference(decisions) {
+  const riskyCount = decisions.filter((d, i) => d.choiceIdx === ROOMS[i].riskyIdx).length;
+  const ratio = riskyCount / decisions.length;
+  if (ratio >= 0.6) return {
+    label: "Risk-Seeking",
+    symbol: "U(v) = v²",
+    color: "#e03131",
+    desc: "You consistently chose higher-variance gambles. Your utility function is convex — larger potential gains outweigh the added uncertainty.",
+  };
+  if (ratio <= 0.4) return {
+    label: "Risk-Averse",
+    symbol: "U(v) = √v",
+    color: "#748ffc",
+    desc: "You favored safer, certain outcomes. Your utility function is concave — you sacrifice expected value to reduce variance.",
+  };
+  return {
+    label: "Risk-Neutral",
+    symbol: "U(v) = v",
+    color: "#94d82d",
+    desc: "You chose based on expected value alone. Your utility function is linear — variance neither attracts nor repels you.",
+  };
 }
 
-function computeResourceScore(decisions) {
-  let totalEV = 0, totalTimeCost = 0;
-  decisions.forEach((d, i) => {
-    totalEV       += ROOMS[i].choices[d.choiceIdx].ev;
-    totalTimeCost += d.rt / TIME_LIMIT;
-  });
-  return (totalEV - 0.3 * totalTimeCost * 10).toFixed(1);
-}
-
-function getDecisionStyle(v, a, bs) {
-  const vn = parseFloat(v), an = parseFloat(a), bn = parseFloat(bs);
-  if (vn > 2.0 && an < 1.5) return { label: "The Berserker",    color: "#e03131", desc: "You charged without thought — pure instinct, heedless of consequence." };
-  if (vn > 1.5 && an > 2.0) return { label: "The Strategist",   color: "#f59f00", desc: "Swift yet deliberate. You read the signs and trusted what you saw." };
-  if (vn < 1.0 && an > 2.5) return { label: "The Scholar",      color: "#748ffc", desc: "You weighed every shadow before stepping. Caution was your blade." };
-  if (bn > 70)               return { label: "The Oracle",       color: "#cc5de8", desc: "Your choices aligned with optimal belief — you updated on evidence." };
-  if (vn < 1.2 && an < 1.5) return { label: "The Lost Soul",    color: "#868e96", desc: "The fog of uncertainty swallowed your signal. Evidence was noise." };
-  return                            { label: "The Wanderer",    color: "#94d82d", desc: "Neither reckless nor overcautious — you navigated with quiet pragmatism." };
+function getDecisionStyle(v, a) {
+  const vn = parseFloat(v), an = parseFloat(a);
+  if (vn > 2.0 && an < 1.5) return { label: "The Berserker",  color: "#e03131", desc: "High drift rate, low threshold — you rushed to conclusions before enough evidence accumulated." };
+  if (vn > 1.5 && an > 2.0) return { label: "The Strategist", color: "#f59f00", desc: "High drift rate, high threshold — strong evidence accumulation with careful boundary-setting." };
+  if (vn < 1.0 && an > 2.5) return { label: "The Scholar",    color: "#748ffc", desc: "Low drift rate, high threshold — slow evidence accumulation but you waited for certainty." };
+  if (vn < 1.2 && an < 1.5) return { label: "The Lost Soul",  color: "#868e96", desc: "Low drift rate, low threshold — noisy evidence and an early boundary led you astray." };
+  return                            { label: "The Wanderer",  color: "#94d82d", desc: "Moderate drift and threshold — you balanced speed and accuracy across the chambers." };
 }
 
 // ─── EVIDENCE BAR ─────────────────────────────────────────────────────────────
@@ -207,6 +214,7 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
   const [timeLeft,  setTimeLeft]  = useState(TIME_LIMIT);
   const [evidProg,  setEvidProg]  = useState(0);
   const [feedback,  setFeedback]  = useState(null);
+  const [pendingDecision, setPendingDecision] = useState(null);
   const startRef = useRef(null);
   const timerRef = useRef(null);
 
@@ -248,9 +256,7 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
     const choseOptimal = idx === room.optimalIdx;
     setPhase("done");
     setFeedback({ idx, choseOptimal, timedOut });
-    setTimeout(() => {
-      onDecide({ choiceIdx: idx, choseOptimal, rt });
-    }, 900);
+    setPendingDecision({ choiceIdx: idx, choseOptimal, rt });
   };
 
   const revealed = phase !== "evidence";
@@ -359,40 +365,56 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
           </div>
         </div>
       )}
+
+      {/* Next button */}
+      {pendingDecision && (
+        <button
+          onClick={() => onDecide(pendingDecision)}
+          style={{
+            width: "100%", marginTop: "16px", padding: "14px",
+            background: "linear-gradient(135deg, rgba(160,70,0,0.2), rgba(100,40,0,0.1))",
+            border: "1px solid rgba(200,100,20,0.4)",
+            borderRadius: "10px", color: "#f59f00",
+            fontSize: "14px", fontFamily: "monospace",
+            letterSpacing: "2px", cursor: "pointer",
+            transition: "all 0.2s ease",
+            animation: "fadeSlideUp 0.4s ease both",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.boxShadow = "0 0 30px rgba(200,100,0,0.2)";
+            e.currentTarget.style.borderColor = "rgba(240,160,0,0.6)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.boxShadow = "none";
+            e.currentTarget.style.borderColor = "rgba(200,100,20,0.4)";
+          }}
+        >
+          {roomIdx + 1 >= totalRooms ? "FACE THE RECKONING ▸" : "DESCEND DEEPER ▸"}
+        </button>
+      )}
     </div>
   );
 }
 
 // ─── SCORE SCREEN ─────────────────────────────────────────────────────────────
 function ScoreScreen({ decisions }) {
-  const v      = estimateDriftRate(decisions);
-  const a      = estimateThreshold(decisions);
-  const bayes  = computeBayesScore(decisions);
-  const res    = computeResourceScore(decisions);
-  const style  = getDecisionStyle(v, a, bayes);
-  const correct = decisions.filter(d => d.choseOptimal).length;
-  const avgRT   = (decisions.reduce((s, d) => s + d.rt, 0) / decisions.length / 1000).toFixed(2);
+  const v        = estimateDriftRate(decisions);
+  const a        = estimateThreshold(decisions);
+  const riskPref = estimateRiskPreference(decisions);
+  const style    = getDecisionStyle(v, a);
+  const correct  = decisions.filter(d => d.choseOptimal).length;
+  const avgRT    = (decisions.reduce((s, d) => s + d.rt, 0) / decisions.length / 1000).toFixed(2);
 
   const metrics = [
     {
       label: "Drift Rate", symbol: "v", value: v, unit: "",
       color: "#f59f00",
-      desc: "Evidence accumulation speed. High v = strong, fast signal processing."
+      desc: "Rate of evidence accumulation. High v = strong, fast signal — you locked onto the better option quickly."
     },
     {
       label: "Decision Threshold", symbol: "a", value: a, unit: "",
       color: "#748ffc",
-      desc: "Caution before committing. High a = deliberate; low a = impulsive."
-    },
-    {
-      label: "Bayesian Score", symbol: "P(H|D)", value: bayes, unit: "%",
-      color: "#cc5de8",
-      desc: "Posterior probability you acted as an optimal Bayesian agent."
-    },
-    {
-      label: "Net Utility", symbol: "E[U|π]−λC(π)", value: res, unit: "g",
-      color: "#94d82d",
-      desc: "Reward minus cognitive cost (λ=0.3). Resource-rational score."
+      desc: "How much evidence you needed before deciding. High a = deliberate; low a = impulsive."
     },
   ];
 
@@ -405,7 +427,7 @@ function ScoreScreen({ decisions }) {
           The Reckoning
         </h2>
         <div style={{ color: "rgba(200,130,50,0.7)", fontSize: "12px", fontFamily: "monospace", letterSpacing: "2px" }}>
-          COGNITIVE PROFILE COMPLETE
+          DDM + EUT PROFILE COMPLETE
         </div>
       </div>
 
@@ -439,8 +461,11 @@ function ScoreScreen({ decisions }) {
         </div>
       </div>
 
-      {/* Metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+      {/* DDM Metrics */}
+      <div style={{ color: "rgba(210,140,50,0.7)", fontSize: "11px", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
+        DRIFT DIFFUSION MODEL
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
         {metrics.map(m => (
           <div key={m.label} style={{
             padding: "14px", borderRadius: "8px",
@@ -470,6 +495,29 @@ function ScoreScreen({ decisions }) {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* EUT Metric */}
+      <div style={{ color: "rgba(210,140,50,0.7)", fontSize: "11px", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
+        EXPECTED UTILITY THEORY
+      </div>
+      <div style={{
+        padding: "14px", borderRadius: "8px", marginBottom: "20px",
+        background: "rgba(15,7,2,0.6)",
+        border: `1px solid ${riskPref.color}25`,
+        boxShadow: `0 0 12px ${riskPref.color}0a`
+      }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "6px" }}>
+          <span style={{ color: riskPref.color, fontSize: "22px", fontWeight: "bold", fontFamily: "'Georgia', serif" }}>
+            {riskPref.label}
+          </span>
+          <span style={{ color: `${riskPref.color}80`, fontSize: "13px", fontFamily: "monospace" }}>
+            {riskPref.symbol}
+          </span>
+        </div>
+        <p style={{ color: "rgba(200,150,80,0.7)", fontSize: "12px", fontFamily: "monospace", margin: "0", lineHeight: "1.6" }}>
+          {riskPref.desc}
+        </p>
       </div>
 
       {/* Decision log */}
@@ -533,9 +581,10 @@ export default function DDMDungeon() {
 
   // Shared container style
   const containerStyle = {
-    width: "100%",
+    maxWidth: "900px",
+    margin: "0 auto",
     minHeight: "100vh",
-    padding: "32px",
+    padding: "32px 24px",
   };
 
   return (
@@ -607,11 +656,15 @@ export default function DDMDungeon() {
                 fontFamily: "monospace", marginBottom: "22px",
                 lineHeight: "1.8", letterSpacing: "0.5px"
               }}>
-                {ROOMS.length} chambers. Binary fates. Shadows watching.<br />
-                Your choices will be judged by three ancient laws:<br />
-                — Drift Diffusion Model  (v, a)<br />
-                — Bayesian Decision Theory  P(H|D)<br />
-                — Resource Rationality  E[U|π] − λC(π)
+                {ROOMS.length} chambers. Binary fates. Evidence accumulating.<br />
+                Your decisions will be analyzed through two frameworks:<br />
+                <br />
+                DDM — how you process noisy evidence:<br />
+                — Drift rate  (v): speed of evidence accumulation<br />
+                — Threshold  (a): how much evidence you needed<br />
+                <br />
+                EUT — your revealed utility function:<br />
+                — Are you risk-averse, neutral, or seeking?
               </p>
               <div style={{
                 padding: "12px 16px", borderRadius: "8px",

@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Ignore Python virtual environments
+.venv/
+env/
+__pycache__/
+# Ignore mamba/conda environment folders (if any accidentally created here)
+.env/
+# Do not ignore environment.yml (should be tracked)
+!environment.yml
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -78,17 +78,36 @@ const TIME_LIMIT     = 15000;
 const EVIDENCE_DELAY = 1400;
 
 // ─── SCORING ──────────────────────────────────────────────────────────────────
-function estimateDriftRate(decisions) {
-  const correct     = decisions.filter(d => d.choseOptimal).length;
-  const accuracy    = correct / decisions.length;
-  const avgRT       = decisions.reduce((s, d) => s + d.rt, 0) / decisions.length;
-  const normRT      = Math.min(avgRT / TIME_LIMIT, 1);
-  return Math.max(0.1, accuracy * (1 - normRT * 0.5) * 3).toFixed(2);
-}
+function classifyDDM(decisions) {
+  const correct  = decisions.filter(d => d.choseOptimal).length;
+  const accuracy = correct / decisions.length;
+  const avgRT    = decisions.reduce((s, d) => s + d.rt, 0) / decisions.length;
 
-function estimateThreshold(decisions) {
-  const avgRT = decisions.reduce((s, d) => s + d.rt, 0) / decisions.length;
-  return Math.max(0.5, (avgRT / TIME_LIMIT) * 4).toFixed(2);
+  // v: drift rate — proxied by accuracy
+  let v;
+  if (accuracy >= 0.8)
+    v = { label: "Strong Signal",   tier: "Upper Third", color: "#f59f00",
+          desc: "You consistently identified the better option — high evidence accumulation rate." };
+  else if (accuracy >= 0.6)
+    v = { label: "Moderate Signal", tier: "Middle Third", color: "#94d82d",
+          desc: "Mixed accuracy — some chambers you locked on quickly, others were noisier." };
+  else
+    v = { label: "Weak Signal",     tier: "Lower Third", color: "#748ffc",
+          desc: "Evidence accumulation was slow or noisy — the optimal choice was hard to detect." };
+
+  // a: decision threshold — proxied by mean RT
+  let a;
+  if (avgRT > 9000)
+    a = { label: "Cautious",   tier: "Upper Third", color: "#748ffc",
+          desc: "You waited for substantial evidence before committing — high decision threshold." };
+  else if (avgRT > 5000)
+    a = { label: "Balanced",   tier: "Middle Third", color: "#94d82d",
+          desc: "Moderate deliberation — you balanced speed and caution across the chambers." };
+  else
+    a = { label: "Impulsive",  tier: "Lower Third", color: "#e03131",
+          desc: "You committed quickly — low threshold, prioritizing speed over certainty." };
+
+  return { v, a, correct, avgRT };
 }
 
 function estimateRiskPreference(decisions) {
@@ -114,13 +133,15 @@ function estimateRiskPreference(decisions) {
   };
 }
 
-function getDecisionStyle(v, a) {
-  const vn = parseFloat(v), an = parseFloat(a);
-  if (vn > 2.0 && an < 1.5) return { label: "The Berserker",  color: "#e03131", desc: "High drift rate, low threshold — you rushed to conclusions before enough evidence accumulated." };
-  if (vn > 1.5 && an > 2.0) return { label: "The Strategist", color: "#f59f00", desc: "High drift rate, high threshold — strong evidence accumulation with careful boundary-setting." };
-  if (vn < 1.0 && an > 2.5) return { label: "The Scholar",    color: "#748ffc", desc: "Low drift rate, high threshold — slow evidence accumulation but you waited for certainty." };
-  if (vn < 1.2 && an < 1.5) return { label: "The Lost Soul",  color: "#868e96", desc: "Low drift rate, low threshold — noisy evidence and an early boundary led you astray." };
-  return                            { label: "The Wanderer",  color: "#94d82d", desc: "Moderate drift and threshold — you balanced speed and accuracy across the chambers." };
+function getDecisionStyle(vLabel, aLabel) {
+  const highV = vLabel === "Strong Signal";
+  const lowA  = aLabel === "Impulsive";
+  const highA = aLabel === "Cautious";
+  if (highV && lowA)  return { label: "The Berserker",  color: "#e03131", desc: "Strong signal, low threshold — you sensed the answer fast and committed before gathering all the evidence." };
+  if (highV && highA) return { label: "The Strategist", color: "#f59f00", desc: "Strong signal, high threshold — efficient evidence accumulation paired with deliberate boundary-setting." };
+  if (!highV && highA) return { label: "The Scholar",   color: "#748ffc", desc: "Weak signal, high threshold — you held out for certainty even when the evidence was thin." };
+  if (!highV && lowA) return { label: "The Lost Soul",  color: "#868e96", desc: "Weak signal, low threshold — noisy evidence and an early boundary meant decisions were mostly guesswork." };
+  return                     { label: "The Wanderer",   color: "#94d82d", desc: "Balanced drift and threshold — you adapted your speed and caution across the chambers." };
 }
 
 // ─── EVIDENCE BAR ─────────────────────────────────────────────────────────────
@@ -398,25 +419,10 @@ function RoomView({ room, roomIdx, totalRooms, onDecide }) {
 
 // ─── SCORE SCREEN ─────────────────────────────────────────────────────────────
 function ScoreScreen({ decisions }) {
-  const v        = estimateDriftRate(decisions);
-  const a        = estimateThreshold(decisions);
+  const { v, a, correct, avgRT } = classifyDDM(decisions);
   const riskPref = estimateRiskPreference(decisions);
-  const style    = getDecisionStyle(v, a);
-  const correct  = decisions.filter(d => d.choseOptimal).length;
-  const avgRT    = (decisions.reduce((s, d) => s + d.rt, 0) / decisions.length / 1000).toFixed(2);
-
-  const metrics = [
-    {
-      label: "Drift Rate", symbol: "v", value: v, unit: "",
-      color: "#f59f00",
-      desc: "Rate of evidence accumulation. High v = strong, fast signal — you locked onto the better option quickly."
-    },
-    {
-      label: "Decision Threshold", symbol: "a", value: a, unit: "",
-      color: "#748ffc",
-      desc: "How much evidence you needed before deciding. High a = deliberate; low a = impulsive."
-    },
-  ];
+  const style    = getDecisionStyle(v.label, a.label);
+  const avgRTSec = (avgRT / 1000).toFixed(2);
 
   return (
     <div style={{ animation: "fadeSlideUp 0.5s ease both" }}>
@@ -457,7 +463,7 @@ function ScoreScreen({ decisions }) {
           fontSize: "13px", fontFamily: "monospace", color: "rgba(210,160,70,0.75)"
         }}>
           <span>{correct}/{decisions.length} optimal</span>
-          <span>avg {avgRT}s</span>
+          <span>avg {avgRTSec}s</span>
         </div>
       </div>
 
@@ -466,32 +472,30 @@ function ScoreScreen({ decisions }) {
         DRIFT DIFFUSION MODEL
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
-        {metrics.map(m => (
-          <div key={m.label} style={{
+        {[
+          { key: "v", param: v, label: "DRIFT RATE", symbol: "v", raw: `${correct}/${decisions.length} correct` },
+          { key: "a", param: a, label: "THRESHOLD",  symbol: "a", raw: `${avgRTSec}s avg RT` },
+        ].map(({ key, param, label, symbol, raw }) => (
+          <div key={key} style={{
             padding: "14px", borderRadius: "8px",
             background: "rgba(15,7,2,0.6)",
-            border: `1px solid ${m.color}25`,
-            boxShadow: `0 0 12px ${m.color}0a`
+            border: `1px solid ${param.color}25`,
+            boxShadow: `0 0 12px ${param.color}0a`
           }}>
-            <div style={{
-              color: "rgba(210,140,50,0.7)", fontSize: "11px",
-              fontFamily: "monospace", letterSpacing: "1.5px", marginBottom: "6px"
-            }}>
-              {m.label.toUpperCase()}
+            <div style={{ color: "rgba(210,140,50,0.7)", fontSize: "11px", fontFamily: "monospace", letterSpacing: "1.5px", marginBottom: "6px" }}>
+              {label} ({symbol})
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "4px" }}>
-              <span style={{ color: m.color, fontSize: "26px", fontWeight: "bold", fontFamily: "'Georgia', serif" }}>
-                {m.value}
-              </span>
-              <span style={{ color: `${m.color}80`, fontSize: "13px", fontFamily: "monospace" }}>
-                {m.unit}
-              </span>
+            <div style={{ color: param.color, fontSize: "20px", fontWeight: "bold", fontFamily: "'Georgia', serif", marginBottom: "2px" }}>
+              {param.label}
             </div>
-            <div style={{ color: "rgba(210,160,70,0.6)", fontSize: "12px", fontFamily: "monospace", lineHeight: "1.5" }}>
-              {m.symbol}
+            <div style={{ color: `${param.color}90`, fontSize: "11px", fontFamily: "monospace", letterSpacing: "1px", marginBottom: "6px" }}>
+              {param.tier}
             </div>
-            <p style={{ color: "rgba(200,150,80,0.7)", fontSize: "12px", fontFamily: "monospace", margin: "4px 0 0", lineHeight: "1.5" }}>
-              {m.desc}
+            <div style={{ color: "rgba(210,160,70,0.55)", fontSize: "11px", fontFamily: "monospace", marginBottom: "6px" }}>
+              {raw}
+            </div>
+            <p style={{ color: "rgba(200,150,80,0.7)", fontSize: "12px", fontFamily: "monospace", margin: "0", lineHeight: "1.5" }}>
+              {param.desc}
             </p>
           </div>
         ))}
@@ -557,6 +561,33 @@ function ScoreScreen({ decisions }) {
           );
         })}
       </div>
+
+      {/* Survey link */}
+      <a
+        href="https://forms.gle/ynTvuKZ13NLyV6q69"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "block", width: "100%", marginTop: "20px", padding: "14px",
+          background: "linear-gradient(135deg, rgba(160,70,0,0.2), rgba(100,40,0,0.1))",
+          border: "1px solid rgba(200,100,20,0.4)",
+          borderRadius: "10px", color: "#f59f00",
+          fontSize: "14px", fontFamily: "monospace",
+          letterSpacing: "2px", cursor: "pointer",
+          textAlign: "center", textDecoration: "none",
+          transition: "all 0.2s ease",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.boxShadow = "0 0 30px rgba(200,100,0,0.2)";
+          e.currentTarget.style.borderColor = "rgba(240,160,0,0.6)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.boxShadow = "none";
+          e.currentTarget.style.borderColor = "rgba(200,100,20,0.4)";
+        }}
+      >
+        SUBMIT YOUR RESULTS ▸
+      </a>
     </div>
   );
 }
